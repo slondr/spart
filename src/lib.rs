@@ -1,68 +1,66 @@
-pub mod spart {
-    use url::Url;
-    use std::io::prelude::*;
-    
-    pub struct Request {
-	host: String,
-	path: String,
-	content_length: usize,
-	data: Option<String>
-    }
+use url::Url;
+use std::io::prelude::*;
 
-    impl Request {
-	pub fn from_url(parsed_url: Url) -> Result<Request, &'static str> {
-	    if parsed_url.scheme() != "spartan" {
-		return Err("Not a spartan URL")
-	    }
+pub struct Request {
+    host: String,
+    path: String,
+    content_length: usize,
+    data: Option<String>
+}
 
-	    match parsed_url.host_str() {
-		None => Err("No hostname"),
-		Some(unparsed_host) => {
-		    let (data, content_length) = match parsed_url.query() {
-			None => (None, 0),
-			Some(s) => {
-			    let decoded_data = urlencoding::decode(s).unwrap().into_owned();
-			    let decoded_len = decoded_data.chars().count();
-			    (Some(decoded_data), decoded_len)
-			}
-		    };
-
-		    let host = unparsed_host.to_string();
-		    let path = parsed_url.path().to_string();
-		    
-		    Ok(Request { host, path, data, content_length })
-		}
-	    }
+impl Request {
+    pub fn from_url(parsed_url: Url) -> Result<Request, &'static str> {
+	if parsed_url.scheme() != "spartan" {
+	    return Err("Not a spartan URL")
 	}
-    }
-    
 
-    impl std::fmt::Display for Request {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-	    write!(f, "{} {} {}\r\n{}", self.host, self.path, self.content_length, match &self.data {
-		None => String::new(),
-		Some(d) => d.to_string()
-	    })
-	}
-    }
+	match parsed_url.host_str() {
+	    None => Err("No hostname"),
+	    Some(unparsed_host) => {
+		let (data, content_length) = match parsed_url.query() {
+		    None => (None, 0),
+		    Some(s) => {
+			let decoded_data = urlencoding::decode(s).unwrap().into_owned();
+			let decoded_len = decoded_data.chars().count();
+			(Some(decoded_data), decoded_len)
+		    }
+		};
 
-    pub fn get(r: String) -> Result<String, &'static str> {
-	match Url::parse(&r) {
-	    Err(_) => Err("Cannot parse url"),
-	    Ok(url) => {
-		let port = url.port_or_known_default().unwrap(); // patched version of `uri` DOES have a default
-		let request = Request::from_url(url)?;
-		let mut connection = std::net::TcpStream::connect(format!("{}:{}", request.host, port)).unwrap();
-		let request_string = request.to_string();
+		let host = unparsed_host.to_string();
+		let path = parsed_url.path().to_string();
 		
-		match connection.write_all(request_string.as_bytes()) {
-		    Err(_) => Err("Error writing to socket"),
-		    Ok(()) => {
-			let mut buffer = String::new();
-			match connection.read_to_string(&mut buffer) {
-			    Err(_) => Err("Unable to read response"),
-			    Ok(_) => Ok(buffer)
-			}
+		Ok(Request { host, path, data, content_length })
+	    }
+	}
+    }
+}
+
+
+impl std::fmt::Display for Request {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+	write!(f, "{} {} {}\r\n{}", self.host, self.path, self.content_length, match &self.data {
+	    None => String::new(),
+	    Some(d) => d.to_string()
+	})
+    }
+}
+
+pub fn get(r: String) -> Result<String, &'static str> {
+    match Url::parse(&r) {
+	Err(_) => Err("Cannot parse url"),
+	Ok(url) => {
+	    let port = url.port_or_known_default().unwrap(); // patched version of `uri` DOES have a default
+	    let request = Request::from_url(url)?;
+	    let mut connection = std::net::TcpStream::connect(format!("{}:{}", request.host, port)).unwrap();
+	    let request_string = request.to_string();
+	    
+	    match connection.write_all(request_string.as_bytes()) {
+		Err(_) => Err("Error writing to socket"),
+		Ok(()) => {
+		    let mut buffer = String::new();
+		    match connection.read_to_string(&mut buffer) {
+			Err(_) => Err("Unable to read response"),
+			Ok(_) => Ok(buffer)
 		    }
 		}
 	    }
@@ -72,7 +70,7 @@ pub mod spart {
 
 #[cfg(test)]
 mod tests {
-    use crate::spart::Request;
+    use crate::Request;
 
     /// taken from 5.1 of the spec
     
