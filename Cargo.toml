@@ -6,3 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# Some functionality of the normal url crate is only available for "special" schemes such as http.
+# As we want to use this functionality for spartan urls, we use a patched version instead.
+url = { git = "https://github.com/slondr/rust-url-additional-specials", branch = "master" }
+urlencoding = "~2.1"
