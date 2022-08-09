@@ -2,7 +2,7 @@ spart is a library for building Spartan clients. It works!
 
 To use it, add this to your Cargo.toml:
 ```toml
-spart = { git = "https://github.com/slondr/spart" }
+spart = { git = "https://git.sr.ht/~slondr/spart" }
 ```
 
 spart is extremely simple to use. For an example client (about 4 lines of Rust), see: https://git.sr.ht/~slondr/achaea/tree/master/item/src/main.rs
