@@ -35,7 +35,6 @@ impl Request {
     }
 }
 
-
 impl std::fmt::Display for Request {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
 	write!(f, "{} {} {}\r\n{}", self.host, self.path, self.content_length, match &self.data {
@@ -49,20 +48,26 @@ pub fn get(r: String) -> Result<String, &'static str> {
     match Url::parse(&r) {
 	Err(_) => Err("Cannot parse url"),
 	Ok(url) => {
-	    let port = url.port_or_known_default().unwrap(); // patched version of `uri` DOES have a default
-	    let request = Request::from_url(url)?;
-	    let mut connection = std::net::TcpStream::connect(format!("{}:{}", request.host, port)).unwrap();
-	    let request_string = request.to_string();
-	    
-	    match connection.write_all(request_string.as_bytes()) {
-		Err(_) => Err("Error writing to socket"),
-		Ok(()) => {
-		    let mut buffer = String::new();
-		    match connection.read_to_string(&mut buffer) {
-			Err(_) => Err("Unable to read response"),
-			Ok(_) => Ok(buffer)
+	    if let Some(port) = url.port_or_known_default() { // patched version of `uri` DOES have a default
+		let request = Request::from_url(url)?;
+		if let Ok(mut connection) = std::net::TcpStream::connect(format!("{}:{}", request.host, port)) {
+		    let request_string = request.to_string();
+		    
+		    match connection.write_all(request_string.as_bytes()) {
+			Err(_) => Err("Error writing to socket"),
+			Ok(()) => {
+			    let mut buffer = String::new();
+			    match connection.read_to_string(&mut buffer) {
+				Err(_) => Err("Unable to read response"),
+				Ok(_) => Ok(buffer)
+			    }
+			}
 		    }
+		} else {
+		    Err("Failed to connect to host")
 		}
+	    } else {
+		Err("Could not figure out port")
 	    }
 	}
     }
